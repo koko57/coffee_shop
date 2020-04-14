@@ -31,12 +31,6 @@ def after_request(response):
 # db_drop_and_create_all()
 
 # ROUTES
-'''
-TODO implement endpoint
-    GET /drinks
-        it should be a public endpoint
-        or appropriate status code indicating reason for failure
-'''
 
 @app.route('/drinks')
 def get_drinks():
@@ -47,15 +41,10 @@ def get_drinks():
     })
 
 
-'''
-TODO implement endpoint
-        it should require the 'get:drinks-detail' permission
-        or appropriate status code indicating reason for failure
-'''
-
-
 @app.route('/drinks-detail')
-def get_drinks_detail():
+@requires_auth('get:drinks-detail')
+def get_drinks_detail(payload):
+    print(payload)
     drinks = Drink.query.all()
     return jsonify({
         "success": True,
@@ -63,16 +52,9 @@ def get_drinks_detail():
     })
 
 
-'''
-TODO implement endpoint
-    POST /drinks
-        it should require the 'post:drinks' permission
-        or appropriate status code indicating reason for failure
-'''
-
-
 @app.route('/drinks', methods=['POST'])
-def add_new_drink():
+@requires_auth('post:drinks')
+def add_new_drink(payload):
     body = request.get_json()
     title = body.get('title', None)
     recipe = str(json.dumps(body.get('recipe', None)))
@@ -84,23 +66,18 @@ def add_new_drink():
 
     return jsonify({
         "success": True,
-        "drinks": drink.long()
+        "drinks": [drink.long()]
     })
-
-
-'''
-TODO implement endpoint
-    PATCH /drinks/<id>
-        where <id> is the existing model id
-        it should respond with a 404 error if <id> is not found
-        it should require the 'patch:drinks' permission
-        or appropriate status code indicating reason for failure
-'''
-
+    
 
 @app.route('/drinks/<int:drink_id>', methods=['PATCH'])
-def edit_drink(drink_id):
+@requires_auth('patch:drinks')
+def edit_drink(payload, drink_id):
     drink = Drink.query.filter_by(id=drink_id).first()
+    
+    if drink is None:
+        abort(404)
+    
     body = request.get_json()
     title = body.get('title', None)
     recipe = str(json.dumps(body.get('recipe', None)))
@@ -114,20 +91,17 @@ def edit_drink(drink_id):
 
     return jsonify({
         "success": True,
-        "drinks": drink.long()
+        "drinks": [drink.long()]
     })
 
 
-'''
-TODO implement endpoint
-    DELETE /drinks/<id>
-        it should respond with a 404 error if <id> is not found
-        it should require the 'delete:drinks' permission
-        or appropriate status code indicating reason for failure
-'''
 @app.route('/drinks/<int:drink_id>', methods=['DELETE'])
-def delete_drink(drink_id):
+@requires_auth('delete:drinks')
+def delete_drink(payload, drink_id):
     drink = Drink.query.filter_by(id=drink_id).first()
+    if drink is None:
+        abort(404)
+    
     id = drink.long()['id']
     try:
         drink.delete()
@@ -162,6 +136,23 @@ def bad_request(error):
     }), 400
 
 
+@app.errorhandler(401)
+def auth_error(error):
+    return jsonify({
+        "success": False,
+        "error": 401,
+        "message": error.description
+    }), 401
+
+
+@app.errorhandler(403)
+def unauthorized(error):
+    return jsonify({
+        "success": False,
+        "error": 403,
+        "message": error.description
+    }), 403
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({
@@ -178,9 +169,3 @@ def server_error(error):
         "error": 500,
         "message": "Internal server error"
     }), 500
-
-
-'''
-TODO implement error handler for AuthError
-    error handler should conform to general task above 
-'''
