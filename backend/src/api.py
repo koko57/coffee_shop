@@ -44,7 +44,6 @@ def get_drinks():
 @app.route('/drinks-detail')
 @requires_auth('get:drinks-detail')
 def get_drinks_detail(payload):
-    print(payload)
     drinks = Drink.query.all()
     return jsonify({
         "success": True,
@@ -127,32 +126,6 @@ def unprocessable(error):
     }), 422
 
 
-@app.errorhandler(400)
-def bad_request(error):
-    return jsonify({
-        "success": False,
-        "error": 400,
-        "message": "Bad request"
-    }), 400
-
-
-@app.errorhandler(401)
-def auth_error(error):
-    return jsonify({
-        "success": False,
-        "error": 401,
-        "message": error.description
-    }), 401
-
-
-@app.errorhandler(403)
-def unauthorized(error):
-    return jsonify({
-        "success": False,
-        "error": 403,
-        "message": error.description
-    }), 403
-
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({
@@ -169,3 +142,11 @@ def server_error(error):
         "error": 500,
         "message": "Internal server error"
     }), 500
+
+@app.errorhandler(AuthError)
+def auth_error(error):
+    return jsonify({
+        "success": False,
+        "error": error.status_code,
+        "description": error.error['description']
+    }), error.status_code

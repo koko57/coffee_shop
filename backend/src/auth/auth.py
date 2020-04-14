@@ -101,7 +101,6 @@ def verify_decode_jwt(token):
                 audience=API_AUDIENCE,
                 issuer=f'https://{AUTH0_DOMAIN}/'
             )
-
             return payload
 
         except jwt.ExpiredSignatureError:
@@ -125,22 +124,16 @@ def verify_decode_jwt(token):
     raise AuthError({
         'code': 'invalid_header',
         'description': 'Unable to find the appropriate key'
-    }, 400)
-    
+    }, 401)
+
 
 def requires_auth(permission=''):
     def requires_auth_decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             token = get_token_auth_header()
-            try:
-                payload = verify_decode_jwt(token)
-                check_permissions(permission, payload)
-            except:
-                raise AuthError({
-                    'code': 'access_denied',
-                    'description': 'Access denied'
-                }, 403)
+            payload = verify_decode_jwt(token)
+            check_permissions(permission, payload)
             return f(payload, *args, **kwargs)
         return wrapper
     return requires_auth_decorator
